@@ -12,7 +12,7 @@ class W1ToDisplay(Thread):
 
     def __init__(self, w1_id):
         # type: (str) -> W1ToDisplay
-        super(W1ToDisplay, self).__init__()
+        super(W1ToDisplay, self).__init__(name="W1ToDisplay")
         self.id = w1_id
         self.display = display.Display(int(os.environ.get("AIR_DISPLAY_ADDRESS"), 0))
         self.killed = False
@@ -26,8 +26,10 @@ class W1ToDisplay(Thread):
         return self.client.read()
 
     def run(self):
+        print "Starting W1ToDisplay..."
         while True:
             if self.killed:
+                print "Exiting W1ToDisplay..."
                 self.display.exit()
                 break
             temperature = self.client.read()

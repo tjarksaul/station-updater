@@ -48,6 +48,40 @@ class DLRGClient(object):
             self.air_felt = air_felt
             self.water_temp = water_temp
 
+        def __str__(self):
+            if self.status == DLRGClient.States.NOT_ON_DUTY:
+                return "Status: " + self.status
+            s = "Status: " + self.status + ". Wind Hose: " + str(self.wind_hose) + ".\n"
+            if self.wind_kmh is not None or self.wind_bft is not None or self.wind_direction is not None:
+                s += "Wind: "
+                if self.wind_kmh is not None:
+                    s += str(self.wind_kmh) + " km/h"
+                    if self.wind_bft is not None:
+                        s += " ("
+                if self.wind_bft is not None:
+                    s += str(self.wind_bft) + " Bft"
+                    if self.wind_kmh is not None:
+                        s += ")"
+                if self.wind_direction is not None:
+                    s += " from " + self.wind_direction
+                s += ".\n"
+            if self.air_measured is not None or self.air_felt is not None:
+                s += "Air: "
+                if self.air_measured is not None:
+                    s += str(self.air_measured) + u"°C"
+                    if self.air_felt is not None:
+                        s += "(felt: "
+                if self.air_felt is not None:
+                    s += str(self.air_felt) + u"°C"
+                    if self.air_measured is not None:
+                        s += ")"
+                    else:
+                        s += " (felt)"
+                s += ".\n"
+            if self.water_temp is not None:
+                s += "Water: " + str(self.water_temp) + u"°C."
+            return s.encode('utf-8')
+
         @classmethod
         def from_json(cls, obj):
             # type: (dict) -> DLRGClient.Status
@@ -55,6 +89,7 @@ class DLRGClient(object):
                 obj = obj["WRS"]["status"]
                 status = cls(status=obj['status'], wind_hose=obj["windsack"],
                              wind_kmh=float(obj.get("windKmh")) if obj.get("windKmh") is not None else None,
+                             wind_bft=float(obj.get("windBft")) if obj.get("windBft") is not None else None,
                              wind_direction=obj.get('windRichtung'),
                              air_measured=float(obj.get("tempLuftGem")) if obj.get("tempLuftGem") is not None else None,
                              air_felt=float(obj.get("tempLuftGef")) if obj.get("tempLuftGef") is not None else None,
@@ -105,6 +140,9 @@ class DLRGClient(object):
         self.sessionId = ""
 
     def login(self, set_org=True):
+        print "Starting login"
+        if self.DEBUG:
+            print "Username: ", self.username, "\nPassword: ", self.password
         try:
             response = requests.post(
                 url="https://www.dlrg.net/index.php?doc=auth",
@@ -123,8 +161,10 @@ class DLRGClient(object):
             )
             self.sessionId = response.cookies['PHPSESSID']
             if self.username not in response.content:
+                print "Login failed"
                 return False
             else:
+                print "Login successful"
                 if not set_org:
                     return True
                 else:
@@ -137,14 +177,11 @@ class DLRGClient(object):
         try:
             response = requests.get(
                 url="https://www.dlrg.net/index.php",
-                params={
-                    "index",
-                },
                 headers={
                     "Referer": "https://www.dlrg.net/index.php?doc=auth",
                     "Cookie": "PHPSESSID=" + self.sessionId,
                 },
-                verify=not self.DEBUG,
+                verify=not self.DEBUG
             )
             if self.username not in response.content:
                 return False
@@ -182,6 +219,19 @@ class DLRGClient(object):
                    wind_kmh=None, wind_bft=None, wind_direction=None,
                    air_measured=None, air_felt=None, water_temp=None):
         # type: (self.States, bool, float, int, self.WindDirections, float, float, float) -> bool
+
+        if isinstance(status, DLRGClient.Status):
+            return self.set_status(
+                status=status.status,
+                wind_hose=status.wind_hose,
+                wind_kmh=status.wind_kmh,
+                wind_bft=status.wind_bft,
+                wind_direction=status.wind_direction,
+                air_measured=status.air_measured,
+                air_felt=status.air_felt,
+                water_temp=status.water_temp
+            )
+
         if status is None:
             status = self.States.BATHING_ALLOWED
         if wind_direction is None:

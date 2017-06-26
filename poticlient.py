@@ -15,7 +15,7 @@ class PotiClient(Thread):
                  cspin, dis=display.Display(0x70), low=0.0,
                  high=30.0, step=0.5):
         # type: (int, int, int, int, int, display.Display, float, float, float) -> PotiClient
-        Thread.__init__(self)
+        super(PotiClient, self).__init__(name="PotiClient")
         if potentiometer_adc > 7 or potentiometer_adc < 0:
             raise ValueError("We only have 7 adc pins")
         self.potentiometer_adc = potentiometer_adc
@@ -94,8 +94,10 @@ class PotiClient(Thread):
         return value
 
     def run(self):
+        print "Starting PotiClient..."
         while True:
             if self.killed:
+                print "Exiting PotiClient..."
                 GPIO.cleanup()
                 self.display.exit()
                 break

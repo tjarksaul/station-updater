@@ -32,11 +32,16 @@ class Main(object):
         self.pushbutton = None
         self.toggleswitch = None
         self.refreshthread = None
+        self.just_toggled = False
 
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.STATE_LED, GPIO.OUT)
+        GPIO.setup(self.GREEN_LED, GPIO.OUT)
+        GPIO.setup(self.RED_LED, GPIO.OUT)
+
         self.state = False
         GPIO.output(self.STATE_LED, self.state)
+
         self.push_button()
         self.toggle_switch()
         self.toggle = bool(GPIO.input(self.AVAIL_TOGGLE_PIN))
@@ -47,6 +52,7 @@ class Main(object):
         self.w1_thread()
         self.poti_thread()
         self.refresh_thread()
+        Thread(target=self.dlrgclient.login, name="LoginThread").start()
 
     def poti_thread(self):
         dis = display.Display(int(os.environ.get("WATER_DISPLAY_ADDRESS"), 0))
@@ -70,19 +76,36 @@ class Main(object):
         self.w1client.start()
 
     def refresh_thread(self):
-        self.refreshthread = Thread(target=self.refresh_loop)
-        self.refreshthread.daemon = True
+        self.refreshthread = Thread(target=self.refresh_loop, name="Refresh")
+        self.refreshthread.daemon = not bool(os.environ.get("DEBUG"))
         self.refreshthread.start()
 
     def push_button_pressed(self, _):
+        self.just_toggled = True
+        print "Push button pressed"
+        self.update_status(True)
+
+    def update_status(self, local):
         self.state = not self.state
         GPIO.output(self.STATE_LED, self.state)
-        print "Push button pressed"
-        print "current values:"
-        print "Air:\t\t\t", self.w1client.read(), " °C"
-        print "Water:\t\t\t", self.poticlient.get_value(), " °C"
-        print "Station:\t\t", self.state
-        print "Bathing allowed:\t", self.toggle
+        if local:
+            states = dlrgclient.DLRGClient.States
+            state = states.NOT_ON_DUTY
+            if self.state:
+                if self.toggle:
+                    state = states.BATHING_ALLOWED
+                else:
+                    state = states.BATHING_PROHIBITED
+            status = dlrgclient.DLRGClient.Status(status=state, air_measured=self.w1client.read(),
+                                                  water_temp=self.poticlient.get_value())
+            Thread(target=self.set_status, name="UpdateThread", args=[status]).start()
+            print "current status:\n", status
+
+    def set_status(self, status):
+        if not self.dlrgclient.check_login():
+            self.dlrgclient.login()
+        self.dlrgclient.set_status(status)
+        self.just_toggled = False
 
     def push_button(self):
         self.pushbutton = switch.Switch(self.STATE_SWITCH_PIN)
@@ -99,15 +122,26 @@ class Main(object):
         self.toggleswitch.start(self.toggle_switch_changed)
 
     def refresh_loop(self):
-        self.refresh_from_dlrg_status()
-        time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
+        print "Starting refresh loop..."
+        while True:
+            if bool(os.environ.get('DEBUG')):
+                time.sleep(1)
+            else:
+                time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
+            self.refresh_from_dlrg_status()
+            if bool(os.environ.get('DEBUG')):
+                time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
 
     def refresh_from_dlrg_status(self):
+        if self.just_toggled:
+            print "Status has been changed via push button. Not refreshing."
+            return
         status = self.dlrgclient.get_status()
+        print "Loaded status from dlrg.net:\n", status
         if (status.status == dlrgclient.DLRGClient.States.NOT_ON_DUTY and self.state) \
                 or (not (status.status == dlrgclient.DLRGClient.States.NOT_ON_DUTY) and not self.state):
-            print "Setting status from DLRG website"
-            self.push_button_pressed(None)
+            print "Setting status from dlrg.net"
+            self.update_status(False)
             # todo: Eventuell die Lampen am Toggle umschalten
 
 
