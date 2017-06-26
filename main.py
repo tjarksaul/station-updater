@@ -5,6 +5,7 @@ import signal
 import sys
 import time
 from os.path import join, dirname
+from threading import Thread
 
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
@@ -30,6 +31,7 @@ class Main(object):
         self.w1client = None
         self.pushbutton = None
         self.toggleswitch = None
+        self.refreshthread = None
 
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.STATE_LED, GPIO.OUT)
@@ -44,6 +46,7 @@ class Main(object):
                                                 station_id=int(os.environ.get("DLRG_STAT")))
         self.w1_thread()
         self.poti_thread()
+        self.refresh_thread()
 
     def poti_thread(self):
         dis = display.Display(int(os.environ.get("WATER_DISPLAY_ADDRESS"), 0))
@@ -65,6 +68,11 @@ class Main(object):
     def w1_thread(self):
         self.w1client = w1todisplay.W1ToDisplay(os.environ.get("AIR_W1_ID"))
         self.w1client.start()
+
+    def refresh_thread(self):
+        self.refreshthread = Thread(target=self.refresh_loop)
+        self.refreshthread.daemon = True
+        self.refreshthread.start()
 
     def push_button_pressed(self, _):
         self.state = not self.state
@@ -89,6 +97,18 @@ class Main(object):
     def toggle_switch(self):
         self.toggleswitch = switch.Switch(self.AVAIL_TOGGLE_PIN)
         self.toggleswitch.start(self.toggle_switch_changed)
+
+    def refresh_loop(self):
+        self.refresh_from_dlrg_status()
+        time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
+
+    def refresh_from_dlrg_status(self):
+        status = self.dlrgclient.get_status()
+        if (status.status == dlrgclient.DLRGClient.States.NOT_ON_DUTY and self.state) \
+                or (not (status.status == dlrgclient.DLRGClient.States.NOT_ON_DUTY) and not self.state):
+            print "Setting status from DLRG website"
+            self.push_button_pressed(None)
+            # todo: Eventuell die Lampen am Toggle umschalten
 
 
 def exit_gracefully(*_):
