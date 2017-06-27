@@ -54,6 +54,11 @@ class Main(object):
         self.refresh_thread()
         Thread(target=self.dlrgclient.login, name="LoginThread").start()
 
+    def exit(self):
+        self.poticlient.__exit__(1, 1, 1)
+        self.w1client.__exit__(1, 1, 1)
+        GPIO.cleanup()
+
     def poti_thread(self):
         dis = display.Display(int(os.environ.get("WATER_DISPLAY_ADDRESS"), 0))
         self.poticlient = poticlient.PotiClient(potentiometer_adc=int(os.environ.get("POTENTIOMETER_ADC")),
@@ -65,11 +70,6 @@ class Main(object):
                                                 high=float(os.environ.get("WATER_HIGH")),
                                                 step=float(os.environ.get("WATER_STEP")))
         self.poticlient.start()
-
-    def exit(self):
-        self.poticlient.__exit__(1, 1, 1)
-        self.w1client.__exit__(1, 1, 1)
-        GPIO.cleanup()
 
     def w1_thread(self):
         self.w1client = w1todisplay.W1ToDisplay(os.environ.get("AIR_W1_ID"))
