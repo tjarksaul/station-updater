@@ -124,13 +124,9 @@ class Main(object):
     def refresh_loop(self):
         print "Starting refresh loop..."
         while True:
-            if bool(os.environ.get('DEBUG')):
-                time.sleep(1)
-            else:
-                time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
+            time.sleep(1)
             self.refresh_from_dlrg_status()
-            if bool(os.environ.get('DEBUG')):
-                time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
+            time.sleep(float(os.environ.get("DLRG_REFRESH_INTERVAL")) * 60)
 
     def refresh_from_dlrg_status(self):
         if self.just_toggled:
