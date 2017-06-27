@@ -85,8 +85,11 @@ class Main(object):
         print "Push button pressed"
         self.update_status(True)
 
-    def update_status(self, local):
-        self.state = not self.state
+    def update_status(self, local, state=None):
+        if state is None:
+            self.state = not self.state
+        else:
+            self.state = state
         GPIO.output(self.STATE_LED, self.state)
         if local:
             states = dlrgclient.DLRGClient.States
@@ -116,6 +119,7 @@ class Main(object):
         self.toggle = bool(GPIO.input(channel))
         GPIO.output(self.GREEN_LED, self.toggle)
         GPIO.output(self.RED_LED, not self.toggle)
+        self.update_status(local=True, state=self.state)
 
     def toggle_switch(self):
         self.toggleswitch = switch.Switch(self.AVAIL_TOGGLE_PIN)
@@ -139,6 +143,14 @@ class Main(object):
             print "Setting status from dlrg.net"
             self.update_status(False)
             # todo: Eventuell die Lampen am Toggle umschalten
+        water_diff = abs(
+            status.water_temp - self.poticlient.get_value()) if status.water_temp is not None else sys.maxint
+        air_diff = abs(status.air_measured - self.w1client.read()) if status.air_measured is not None else sys.maxint
+        if air_diff > 0.5 or water_diff > 0.5:
+            # a temp did change > 0.5 degrees. We update the remote side
+            print "water temp did change ", water_diff, " degrees. Air temp did change ", air_diff, \
+                " degrees. Updating the remote side."
+            self.update_status(local=True, state=self.state)
 
 
 def exit_gracefully(*_):
