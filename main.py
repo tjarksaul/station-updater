@@ -143,14 +143,16 @@ class Main(object):
             print "Setting status from dlrg.net"
             self.update_status(False)
             # todo: Eventuell die Lampen am Toggle umschalten
-        water_diff = abs(
-            status.water_temp - self.poticlient.get_value()) if status.water_temp is not None else sys.maxint
-        air_diff = abs(status.air_measured - self.w1client.read()) if status.air_measured is not None else sys.maxint
-        if air_diff > 0.5 or water_diff > 0.5:
-            # a temp did change > 0.5 degrees. We update the remote side
-            print "water temp did change ", water_diff, " degrees. Air temp did change ", air_diff, \
-                " degrees. Updating the remote side."
-            self.update_status(local=True, state=self.state)
+        if not (status.status == dlrgclient.DLRGClient.States.NOT_ON_DUTY):
+            water_diff = abs(
+                status.water_temp - self.poticlient.get_value()) if status.water_temp is not None else sys.maxint
+            air_diff = abs(
+                status.air_measured - self.w1client.read()) if status.air_measured is not None else sys.maxint
+            if air_diff > 0.5 or water_diff > 0.5:
+                # a temp did change > 0.5 degrees. We update the remote side
+                print "water temp did change ", water_diff, " degrees. Air temp did change ", air_diff, \
+                    " degrees. Updating the remote side."
+                self.update_status(local=True, state=self.state)
 
 
 def exit_gracefully(*_):
