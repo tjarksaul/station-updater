@@ -10,6 +10,7 @@ import display
 
 class PotiClient(Thread):
     """docstring for PotiClient"""
+    TOLERANCE = 5
 
     def __init__(self, potentiometer_adc, clockpin, mosipin, misopin,
                  cspin, dis=display.Display(0x70), low=0.0,
@@ -28,6 +29,7 @@ class PotiClient(Thread):
         self.step = 1 / step
         self.display = dis
         self.killed = False
+        self.last_value = -10000
 
         self.setup_gpio()
 
@@ -90,6 +92,10 @@ class PotiClient(Thread):
         else:
             step = 1 / step
         trim_pot = self.readadc()
+        if abs(trim_pot - self.last_value) > self.TOLERANCE:
+            self.last_value = trim_pot
+        else:
+            trim_pot = self.last_value
         value = round(((trim_pot / 1023.0 * high) + low) * step) / step
         return value
 
