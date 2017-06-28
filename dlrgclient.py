@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+from time import time
 
 import requests
 
@@ -138,6 +139,7 @@ class DLRGClient(object):
         self.stationId = station_id
         self.orgId = org_id
         self.sessionId = ""
+        self.login_time = 0.0
 
     def login(self, set_org=True):
         print "Starting login"
@@ -165,6 +167,7 @@ class DLRGClient(object):
                 return False
             else:
                 print "Login successful"
+                self.login_time = time()
                 if not set_org:
                     return True
                 else:
@@ -174,6 +177,9 @@ class DLRGClient(object):
             return False
 
     def check_login(self):
+        # sessions on dlrg.net expire after 30 minutes
+        if (self.login_time + 30 * 60) < time():
+            return False
         try:
             response = requests.get(
                 url="https://www.dlrg.net/index.php",
