@@ -258,6 +258,8 @@ class DLRGClient(object):
         if water_temp is None:
             water_temp = ""
 
+        print "Setting status"
+
         data = {
             "STATUS": status,
             "save": "Status melden",
@@ -287,8 +289,10 @@ class DLRGClient(object):
                 verify=not self.DEBUG,
             )
             if "Status erfolgreich" in response.content:
+                print "Status successfully set"
                 return True
             else:
+                print "Failed setting status"
                 return False
         except requests.exceptions.RequestException as e:
             print('HTTP Request failed: ' + e.message)
