@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+import datetime
+import os
 
+import astral
 from Adafruit_LED_Backpack import SevenSegment
 
 
@@ -12,6 +15,18 @@ class Display(object):
         self.display = SevenSegment.SevenSegment(address=address)
         self.display.begin()
         self.display.clear()
+
+        self.DARKER_AT_NIGHT = bool(os.environ.get('DISPLAY_DARKER_AT_NIGHT'))
+        if self.DARKER_AT_NIGHT:
+            self.loc = astral.Location(('ClientLocation', 'ClientRegion', float(os.environ.get('LATITUDE')),
+                                        float(os.environ.get('LONGITUDE')), 'UTC',
+                                        int(os.environ.get('ELEVATION'))))
+
+    def is_day(self):
+        sunrise = self.loc.sunrise()
+        sunset = self.loc.sunset()
+        now = datetime.datetime.now(sunrise.tzinfo)
+        return sunrise < now < sunset
 
     def write_temperature(self, value):
         # type: (float) -> None
@@ -30,6 +45,11 @@ class Display(object):
             self.display.set_decimal(1, True)
             self.display.set_digit(2, string_value[3])
         self.display.set_digit_raw(3, 0x63)  # degree sign
+
+        if not self.DARKER_AT_NIGHT or self.is_day():
+            self.display.set_brightness(15)
+        else:
+            self.display.set_brightness(0)
 
         self.display.write_display()
 
