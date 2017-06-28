@@ -17,6 +17,15 @@ import switch
 import w1todisplay
 
 
+def init_dotenv():
+    print "Initiating dotenv"
+    dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+
+
+init_dotenv()
+
+
 class Main(object):
     """docstring for Main"""
     STATE_LED = int(os.environ.get("STATE_LED_PIN"))
@@ -161,13 +170,7 @@ def exit_gracefully(*_):
     sys.exit(0)
 
 
-def init_dotenv():
-    dotenv_path = join(dirname(__file__), '.env')
-    load_dotenv(dotenv_path)
-
-
 if __name__ == '__main__':
-    init_dotenv()
     main = Main()
     original_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, exit_gracefully)
