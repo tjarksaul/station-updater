@@ -86,7 +86,7 @@ class Main(object):
 
     def refresh_thread(self):
         self.refreshthread = Thread(target=self.refresh_loop, name="Refresh")
-        self.refreshthread.daemon = not bool(os.environ.get("DEBUG"))
+        self.refreshthread.daemon = True
         self.refreshthread.start()
 
     def push_button_pressed(self, _):
