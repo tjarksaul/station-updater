@@ -160,9 +160,10 @@ class DLRGClient(object):
                     "url_params": "",
                 },
                 verify=not self.DEBUG,
+                allow_redirects=False,
             )
             self.sessionId = response.cookies['PHPSESSID']
-            if self.username not in response.content:
+            if not self.check_login(time_check=False):
                 print "Login failed"
                 return False
             else:
@@ -176,9 +177,9 @@ class DLRGClient(object):
             print('HTTP Request failed: ' + e.message)
             return False
 
-    def check_login(self):
+    def check_login(self, time_check=True):
         # sessions on dlrg.net expire after 30 minutes
-        if (self.login_time + 30 * 60) < time():
+        if time_check and (self.login_time + 30 * 60) < time():
             return False
         try:
             response = requests.get(
