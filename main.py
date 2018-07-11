@@ -53,7 +53,7 @@ class Main(object):
 
         self.push_button()
         self.toggle_switch()
-        self.toggle = bool(GPIO.input(self.AVAIL_TOGGLE_PIN))
+        self.toggle = not bool(GPIO.input(self.AVAIL_TOGGLE_PIN))
         self.dlrgclient = dlrgclient.DLRGClient(username=os.environ.get("DLRG_USER"),
                                                 password=os.environ.get("DLRG_PASS"),
                                                 org_id=os.environ.get("DLRG_GLIE"),
@@ -124,10 +124,10 @@ class Main(object):
         self.pushbutton.start(self.push_button_pressed)
 
     def toggle_switch_changed(self, channel):
-        print "Toggle changed to ", GPIO.input(channel)
-        self.toggle = bool(GPIO.input(channel))
-        GPIO.output(self.GREEN_LED, self.toggle)
-        GPIO.output(self.RED_LED, not self.toggle)
+        print "Toggle changed to ", not GPIO.input(channel)
+        self.toggle = not bool(GPIO.input(channel))
+        GPIO.output(self.GREEN_LED, not self.toggle)
+        GPIO.output(self.RED_LED, self.toggle)
         self.update_status(local=True, state=self.state)
 
     def toggle_switch(self):

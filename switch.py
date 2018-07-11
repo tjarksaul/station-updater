@@ -13,7 +13,7 @@ class Switch(object):
 
     def setup_gpio(self):
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.gpio, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(self.gpio, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     def start(self, callback):
         GPIO.add_event_detect(self.gpio, GPIO.RISING, callback=callback, bouncetime=1000)
