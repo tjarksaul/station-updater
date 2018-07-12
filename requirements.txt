@@ -1,0 +1,12 @@
+Adafruit-GPIO==1.0.3
+Adafruit-LED-Backpack==1.8.1
+Adafruit-PureIO==0.2.3
+astral==1.6.1
+certifi==2018.4.16
+chardet==3.0.4
+dotenv==0.0.5
+idna==2.7
+pytz==2018.5
+requests==2.19.1
+urllib3==1.23
+RPi.GPIO==0.6.3
