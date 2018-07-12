@@ -8,7 +8,7 @@ import requests
 
 class DLRGClient(object):
     """docstring for DLRGClient"""
-    DEBUG = os.environ.get("DEBUG")
+    DEBUG = os.environ.get("DEBUG") == 'True'
 
     class States(object):
         NOT_ON_DUTY = "nn"
@@ -138,16 +138,17 @@ class DLRGClient(object):
         self.password = password
         self.stationId = station_id
         self.orgId = org_id
-        self.sessionId = ""
         self.login_time = 0.0
+
+        self.session = requests.Session()
 
     def login(self, set_org=True):
         print "Starting login"
         if self.DEBUG:
             print "Username: ", self.username, "\nPassword: ", self.password
         try:
-            response = requests.post(
-                url="https://www.dlrg.net/index.php?doc=auth",
+            response = self.session.post(
+                url="https://www.dlrg.net/index.php",
                 params={
                     "doc": "auth",
                 },
@@ -162,8 +163,7 @@ class DLRGClient(object):
                 verify=not self.DEBUG,
                 allow_redirects=False,
             )
-            self.sessionId = response.cookies['PHPSESSID']
-            if not self.check_login(time_check=False):
+            if "Passwort falsch" in response.content or not self.check_login(time_check=False):
                 print "Login failed"
                 return False
             else:
@@ -182,15 +182,15 @@ class DLRGClient(object):
         if time_check and (self.login_time + 30 * 60) < time():
             return False
         try:
-            response = requests.get(
+            response = self.session.get(
                 url="https://www.dlrg.net/index.php",
                 headers={
                     "Referer": "https://www.dlrg.net/index.php?doc=auth",
-                    "Cookie": "PHPSESSID=" + self.sessionId,
                 },
-                verify=not self.DEBUG
+                verify=not self.DEBUG,
             )
             if self.username not in response.content:
+                self.session = requests.Session()  # wir machen eine neue Session, weil wir eh nicht eingelogt sind
                 return False
             else:
                 return True
@@ -200,13 +200,12 @@ class DLRGClient(object):
 
     def set_org(self):
         try:
-            response = requests.post(
+            response = self.session.post(
                 url="https://www.dlrg.net/index.php",
                 params={
                     "doc": "index",
                 },
                 headers={
-                    "Cookie": "PHPSESSID=" + self.sessionId,
                     "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
                 },
                 data={
@@ -277,13 +276,12 @@ class DLRGClient(object):
             data["WINDSACK"] = "1"
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 url="https://www.dlrg.net/index.php",
                 params={
                     "doc": "apps/wachstation/wachstationStatus",
                 },
                 headers={
-                    "Cookie": "PHPSESSID=" + self.sessionId,
                     "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
                 },
                 data=data,
@@ -302,21 +300,24 @@ class DLRGClient(object):
     def get_status(self):
         # type: () -> DLRGClient.Status
         try:
-            response = requests.get(
-                url="https://services.dlrg.net/service.php",
-                params={
-                    "doc": "poi",
-                    "strict": "1",  # strict means plain json
-                    "id": self.stationId,
-                    "typ": "WRS"  # means life guard station
-                },
-                headers={
-                    "Referer": "https://www.dlrg.net/index.php?doc=auth",
-                    "Cookie": "PHPSESSID=" + self.sessionId,
-                },
-                verify=not self.DEBUG,
-            )
-            return self.Status.from_json(json.loads(response.content))
+            self.get_status_testable()
         except requests.exceptions.RequestException as e:
             print('HTTP Request failed: ' + e.message)
             return self.Status(status=self.States.NOT_ON_DUTY)
+
+    def get_status_testable(self):
+        # type: () -> DLRGClient.Status
+        response = self.session.get(
+            url="https://services.dlrg.net/service.php",
+            params={
+                "doc": "poi",
+                "strict": "1",  # strict means plain json
+                "id": self.stationId,
+                "typ": "WRS"  # means life guard station
+            },
+            headers={
+                "Referer": "https://www.dlrg.net/index.php?doc=auth",
+            },
+            verify=not self.DEBUG,
+        )
+        return self.Status.from_json(json.loads(response.content))
