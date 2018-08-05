@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
 import os
-from time import time
-
 import requests
+from time import time
 
 
 class DLRGClient(object):
@@ -300,7 +299,7 @@ class DLRGClient(object):
     def get_status(self):
         # type: () -> DLRGClient.Status
         try:
-            self.get_status_testable()
+            return self.get_status_testable()
         except requests.exceptions.RequestException as e:
             print('HTTP Request failed: ' + e.message)
             return self.Status(status=self.States.NOT_ON_DUTY)
